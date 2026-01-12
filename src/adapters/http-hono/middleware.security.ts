@@ -32,7 +32,9 @@ export function createMcpSecurityMiddleware(config: UnifiedConfig): MiddlewareHa
             logger.debug('mcp_security', { message: 'Generated session ID', sid });
           }
 
-          const origin = new URL(c.req.url).origin;
+          const origin = config.AUTH_RESOURCE_URI
+            ? new URL(config.AUTH_RESOURCE_URI).origin
+            : new URL(c.req.url).origin;
           const challenge = buildUnauthorizedChallenge({ origin, sid });
 
           c.header('Mcp-Session-Id', sid);
@@ -79,7 +81,9 @@ export function createMcpSecurityMiddleware(config: UnifiedConfig): MiddlewareHa
               // RS token not found and RS is required - challenge
               const sid = c.req.header('Mcp-Session-Id') ?? randomUUID();
 
-              const origin = new URL(c.req.url).origin;
+              const origin = config.AUTH_RESOURCE_URI
+                ? new URL(config.AUTH_RESOURCE_URI).origin
+                : new URL(c.req.url).origin;
               const challenge = buildUnauthorizedChallenge({ origin, sid });
 
               c.header('Mcp-Session-Id', sid);

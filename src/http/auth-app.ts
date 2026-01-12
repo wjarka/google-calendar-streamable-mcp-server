@@ -25,8 +25,14 @@ export function buildAuthApp(): Hono<{ Bindings: HttpBindings }> {
   // Add discovery endpoint
   // IMPORTANT: Advertise OUR proxy endpoints, not the provider's directly!
   app.get('/.well-known/oauth-authorization-server', (c) => {
-    const here = new URL(c.req.url);
-    const base = `${here.protocol}//${here.host}`;
+    const here = config.AUTH_RESOURCE_URI
+      ? new URL(config.AUTH_RESOURCE_URI)
+      : new URL(c.req.url);
+    // For auth server, use same origin but different port
+    const authPort = Number(here.port || (here.protocol === 'https:' ? 443 : 80)) + 1;
+    const base = config.AUTH_RESOURCE_URI
+      ? `${here.protocol}//${here.hostname}:${authPort}`
+      : `${here.protocol}//${here.host}`;
     const scopes = config.OAUTH_SCOPES.split(' ').filter(Boolean);
 
     const metadata = buildAuthorizationServerMetadata(base, scopes, {

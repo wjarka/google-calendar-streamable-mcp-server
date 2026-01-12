@@ -60,13 +60,25 @@ export const workerDiscoveryStrategy: DiscoveryStrategy = {
 
 export const nodeDiscoveryStrategy: DiscoveryStrategy = {
   resolveAuthBaseUrl: (requestUrl, config) => {
+    // If AUTH_RESOURCE_URI is set, derive auth base from it (same origin, port+1)
+    if (config.AUTH_RESOURCE_URI) {
+      const resourceUrl = new URL(config.AUTH_RESOURCE_URI);
+      const authPort = Number(resourceUrl.port || (resourceUrl.protocol === 'https:' ? 443 : 80)) + 1;
+      return `${resourceUrl.protocol}//${resourceUrl.hostname}:${authPort}`;
+    }
     const authPort = Number(config.PORT) + 1;
     return `${requestUrl.protocol}//${requestUrl.hostname}:${authPort}`;
   },
   resolveAuthorizationServerUrl: (requestUrl, config) => {
+    // If AUTH_RESOURCE_URI is set, derive auth server URL from it
+    if (config.AUTH_RESOURCE_URI) {
+      const resourceUrl = new URL(config.AUTH_RESOURCE_URI);
+      const authPort = Number(resourceUrl.port || (resourceUrl.protocol === 'https:' ? 443 : 80)) + 1;
+      return `${resourceUrl.protocol}//${resourceUrl.hostname}:${authPort}/.well-known/oauth-authorization-server`;
+    }
     const authPort = Number(config.PORT) + 1;
     return `${requestUrl.protocol}//${requestUrl.hostname}:${authPort}/.well-known/oauth-authorization-server`;
   },
-  resolveResourceBaseUrl: (requestUrl) =>
-    `${requestUrl.protocol}//${requestUrl.host}/mcp`,
+  resolveResourceBaseUrl: (requestUrl, config) =>
+    config.AUTH_RESOURCE_URI || `${requestUrl.protocol}//${requestUrl.host}/mcp`,
 };
