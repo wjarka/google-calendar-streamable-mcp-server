@@ -116,8 +116,16 @@ export function buildFlowOptions(
   callbackPath: string;
   tokenEndpointPath: string;
 } {
+  // If AUTH_RESOURCE_URI is set, derive auth server base URL from it
+  let baseUrl = url.origin;
+  if (config.AUTH_RESOURCE_URI) {
+    const resourceUrl = new URL(config.AUTH_RESOURCE_URI);
+    const authPort = Number(resourceUrl.port || (resourceUrl.protocol === 'https:' ? 443 : 80)) + 1;
+    baseUrl = `${resourceUrl.protocol}//${resourceUrl.hostname}:${authPort}`;
+  }
+
   return {
-    baseUrl: url.origin,
+    baseUrl,
     isDev: config.NODE_ENV === 'development',
     callbackPath: overrides.callbackPath ?? '/oauth/callback',
     tokenEndpointPath: overrides.tokenEndpointPath ?? '/api/token',
