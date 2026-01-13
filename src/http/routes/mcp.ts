@@ -38,6 +38,15 @@ export function buildMcpRoutes(params: {
   app.post('/', async (c) => {
     const { req, res } = toReqRes(c.req.raw);
 
+    // Patch setHeader to prevent Transfer-Encoding header from being set
+    const originalSetHeader = res.setHeader.bind(res);
+    res.setHeader = function (name: string, value: any) {
+      if (name.toLowerCase() === 'transfer-encoding') {
+        return res;
+      }
+      return originalSetHeader(name, value);
+    } as any;
+
     try {
       const sessionIdHeader = c.req.header(MCP_SESSION_HEADER) ?? undefined;
       let body: unknown;
@@ -119,6 +128,10 @@ export function buildMcpRoutes(params: {
 
       await ensureConnected(transport);
 
+      // Clear any Transfer-Encoding header that might have been set before the patch
+      // This prevents duplicate headers when Node.js automatically adds it for streaming
+      res.removeHeader('Transfer-Encoding');
+
       // SDK passes requestId to tool handlers, which look up auth context from registry
       await transport.handleRequest(req, res, body);
 
@@ -145,6 +158,16 @@ export function buildMcpRoutes(params: {
 
   app.get('/', async (c) => {
     const { req, res } = toReqRes(c.req.raw);
+
+    // Patch response to prevent Transfer-Encoding header duplication
+    const originalSetHeader = res.setHeader.bind(res);
+    res.setHeader = function (name: string, value: any) {
+      if (name.toLowerCase() === 'transfer-encoding') {
+        return res;
+      }
+      return originalSetHeader(name, value);
+    } as any;
+
     const sessionIdHeader = c.req.header(MCP_SESSION_HEADER);
     if (!sessionIdHeader) {
       return c.json(
@@ -162,7 +185,12 @@ export function buildMcpRoutes(params: {
         return c.text('Invalid session', 404);
       }
       await ensureConnected(transport);
+
+      // Clear any Transfer-Encoding header that might have been set
+      res.removeHeader('Transfer-Encoding');
+
       await transport.handleRequest(req, res);
+
       return toFetchResponse(res);
     } catch (error) {
       void logger.error('mcp', {
@@ -182,6 +210,16 @@ export function buildMcpRoutes(params: {
 
   app.delete('/', async (c) => {
     const { req, res } = toReqRes(c.req.raw);
+
+    // Patch setHeader to prevent Transfer-Encoding header from being set
+    const originalSetHeader = res.setHeader.bind(res);
+    res.setHeader = function (name: string, value: any) {
+      if (name.toLowerCase() === 'transfer-encoding') {
+        return res;
+      }
+      return originalSetHeader(name, value);
+    } as any;
+
     const sessionIdHeader = c.req.header(MCP_SESSION_HEADER);
     if (!sessionIdHeader) {
       return c.json(
@@ -199,9 +237,14 @@ export function buildMcpRoutes(params: {
         return c.text('Invalid session', 404);
       }
       await ensureConnected(transport);
+
+      // Clear any Transfer-Encoding header that might have been set
+      res.removeHeader('Transfer-Encoding');
+
       await transport.handleRequest(req, res);
       transports.delete(sessionIdHeader);
       transport.close();
+
       return toFetchResponse(res);
     } catch (error) {
       void logger.error('mcp', {
